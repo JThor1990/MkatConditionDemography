@@ -11,11 +11,17 @@ The aim of our study was to develop a mechanistic understanding of how rainfall 
 - Projected future temperature trends and their implications for meerkat populations up to the mid and end of the century.
 
 The R code is placed within 6 scripts, each of which carries out a specific analysis or model contained within the paper:  
+
 (1) Part1_RainfallNDVI_Climwin.R  
+
 (2) Part2_ForagingPerformance.R  
+
 (3) Part3_DWGandOML.R  
+
 (4) Part4_DistributedLagModels.R  
+
 (5) Part5_VitalRates.R  
+
 (6) Part6_FutureWarmingKalahari.R  
 
-The scripts were produced by Dr Jack Thorley and Dr Christopher Duncan). All data sets are provided in the repository. 
+The scripts were produced by Dr Jack Thorley and Dr Christopher Duncan. All data sets are provided in the repository. 
