@@ -2,7 +2,7 @@
 
 This repository contains R scripts for analyzing the relationship between climate variability and meerkat demography. 
 
-The aim of our study was to develop a mechanistic understanding of how rainfall and temperature variation affects meerkat demography. Specifically, we:
+The aim of our study was to develop a mechanistic understanding of how variation in rainfall and temperature affect meerkat demography. Specifically, we:
 - Identified the critical period during which rainfall influences vegetation productivity at the field site.
 - Investigated how vegetation productivity and temperature influence meerkat foraging performance.
 - Examined how these climatic variables impact daily weight fluctuations and overall body condition.
