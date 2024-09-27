@@ -8,29 +8,30 @@
 
 ###########################################################
 
-# set up the working environment with required packages
-setwd("INSERT FILE PATH HERE ")
-
 # Load required packages
-lapply(c("cowplot", "ggh4x", "ggplot2", "gratia", "lubridate", "mgcv", "patchwork", "RMySQL", "sf", "tidyverse"), FUN = library, character.only = TRUE)
+lapply(c("tidyverse", "ggplot2", "lubridate", "patchwork", "mgcv", "gratia", "ggh4x", "sf"),  FUN = library, character.only = TRUE)
+
+# Set working directory 
+setwd("INSERT FILE PATH HERE")
 
 # Load the data sets: 
-# Temperature 
+# temperature 
 temp <- read.csv("Data\\MeerkatDailyTemp.csv", header = TRUE) %>% 
-  mutate(date = as.Date(strptime(date, format = "%d/%m/%Y")), 
-         tempmax = if_else(tempmax_noaa < 0, as.numeric(NA), tempmax_noaa ), 
-         tempmin = if_else(tempmin_noaa  < -15, as.numeric(NA), tempmin_noaa),
-         temp_mid = tempmax - (tempmax - tempmin)/2)
+     mutate(date = as.Date(date), 
+            tempmax = if_else(tempmax_noaa < 0, as.numeric(NA), tempmax_noaa ), 
+            tempmin = if_else(tempmin_noaa  < -15, as.numeric(NA), tempmin_noaa),
+            temp_mid = tempmax - (tempmax - tempmin)/2)
 
 # NDVI 
-ndvi <- read.csv("Data\\MeerkatNDVI.csv", header = T) %>% 
-  mutate(date = as.Date(strptime(date, format = "%d/%m/%Y")))
+ndvi_masked_agg <- read.csv("Data\\MeerkatNDVImasked.csv", header = T) %>% 
+  mutate(date = as.Date(date)) %>% 
+  rename(mean_ndvi = mean_ndvi_masked)
   
 # Body condition (average deviation in adult body mass from their age-predicted mass)
-weekly_mass_resid <- read.csv("Data\\MeerkatWeeklyConditionAllAdults.csv", header = TRUE) %>% 
-    mutate(date = as.Date(strptime(date, format = "%d/%m/%Y")), 
-           MonthStart = as.Date(strptime(MonthStart, format = "%d/%m/%Y")))
-  # note that the data here refers to the end average condition of all adults at the end of each week
+  # The weekly average body condition of adults 
+  weekly_mass_resid <- read.csv("Data\\MeerkatWeeklyConditionAllAdults.csv", header = TRUE) %>% 
+    mutate(date = as.Date(strptime(date, format = "%d/%m/%Y")))
+  # note that the data here refers to the end of the week
   
 # Generate a plot theme
 climate_theme <- theme_bw() + 
@@ -69,12 +70,13 @@ weekly_tmax$date <- as.Date(paste0(weekly_tmax$year, "-01-01")) +
 
 # Weekly NDVI 
 weekly_ndvi <- data.frame(date = weekly_tmax$date)
-max_date <- max(ndvi$date) 
+max_date <- max(ndvi_masked_agg$date) 
 weekly_ndvi$mean_ndvi <- sapply(weekly_ndvi$date, FUN = function(x) { 
-  val <- ndvi$mean_ndvi[max(which(ndvi$date < x))]
+  val <- ndvi_masked_agg$mean_ndvi[max(which(ndvi_masked_agg$date < x))]
   return(val)
 })
 weekly_ndvi <- filter(weekly_ndvi, !is.na(mean_ndvi), date < max_date)
+tail(weekly_ndvi)
 
 # Now set up the lagged temperature and ndvi matrices for the modelling
 lagperiod <- c(min(weekly_mass_resid$date) - 16*7, max(weekly_mass_resid$date))
@@ -118,10 +120,10 @@ dlm_full <- gam(weeklyresid ~
                      bs = "cr", k = c(5,5,5)),
                 data = df_model,  
                 method = "REML")
-summary(dlm_full)  # quick to run
+summary(dlm_full)  
 
 layout(matrix(1:4, ncol = 2))
-gam.check(dlm_full) # misses some of the extreme residuals but its not bad
+gam.check(dlm_full)
 k.check(dlm_full)
 layout(1)
 mgcv::plot.gam(dlm_full, select = 1, main = NA)
@@ -131,8 +133,9 @@ mgcv::plot.gam(dlm_full, select = 3, too.far = 0.04, main = NA)
 # check the concurvity: 
 concurvity(dlm_full)
  # The values are high for the yday and the tensor smooth, which is expected given the highly seasonal nature of temperature and NDVI variation. 
- # For this reason, it is difficult to separate the effects of season from those of the specific environmental variables. However, we still think it is useful to include both terms, in particular because the day of the year smooth makes clear that the October increase occurs even in years with low early season rainfall.
- # Even so, the exclusion of the yday term to isolate the specific environmental effects produces similar inferences (run blocked out code to see this)
+ # For this reason, it is difficult to separate the effects of season from those of the specific environmental variables. However, I still think it is useful to include both terms, in particular because the day of the year smooth makes clear that the October increase occurs even in years with low early season rainfall.
+ # Our approach will therefore be very transparent when describing the patterns. 
+ # That said, the exclusion of the yday term to isolate the specific environmental effects produces similar inferences (run blocked out code to see this)
 
 #dlm_full2 <- gam(weeklyresid ~ 
 #                  s(GroupSize, k = 3, bs = "cr") +
@@ -163,6 +166,20 @@ pdat$lags_weekly <- lags_weekly
 pdat$tmax_weekly <- tmax_weekly  
 pdat$ndvi_weekly <- ndvi_weekly  
 
+### new bit ----->>>>>>>
+
+# Get all the dates and back fill the gaps for the week 
+#full_dates <- data.frame(date = seq(min(df_model$date) - 6, max(df_model$date), by = "day"))
+
+#pdat <- full_dates %>%
+#  left_join(pdat, by = "date") %>% 
+#  fill(GroupSize, starts_with("lags"),  starts_with("tmax"),  starts_with("ndvi"), #.direction = "up") %>% 
+#  mutate(year = year(date), yday = yday(date))
+
+#tmax_weekly <- as.matrix(dplyr::select(df_model, tmax.1:tmax.16)#)
+#ndvi_weekly <- as.matrix(dplyr::select(df_model, ndvi.1:ndvi.16)#)
+#lags_weekly <-  matrix(rep(1:16, times = nrow(df_model)), ncol = 16, byrow = TRUE)#
+
 pred <- predict(dlm_full, newdata = pdat, se.fit = TRUE)
 crit <- qt(0.975, df = df.residual(dlm_full)) # ~95% interval critical
 pdat <- transform(pdat, fitted = pred$fit, 
@@ -179,20 +196,13 @@ datelabs <- data.frame(date = seq.Date(as.Date("2010-01-01"),
          mday = mday(date)) %>% 
   filter(mday == 1, month %in% seq(2, 12, 2))
 
-# get the raw data (these data are not provided)
-#mass_to_plot <- filter(mass_resid, between(Date, min(df_model$date), max(df_model$date)), 
-#                       Age_years > 1, PregnantLactating != "Pregnant",
-#                       between(mass_resid, -175, 175)) %>% 
-#  mutate(yday = yday(Date)) %>% 
-#  rename(date = Date)
-
 # Lastly, subtract 3 days from yday so that the raw data and predictions fall in the middle of each week. Means the continuity of the plot across panels is slightly improved
 
 # make the plot
-p <- ggplot(df_model, aes(x = yday - 3, y = weeklyresid)) + 
-  #geom_point(data = mass_to_plot, aes(x = yday, y = mass_resid, 
-  #                                    colour = mass_resid), 
-  #          alpha = 0.06, size = 0.5) + 
+p <- ggplot(df_model, aes(x = yday - 3, y = weeklyresid)) +
+  geom_point(data = mass_to_plot, aes(x = yday, y = mass_resid, 
+                                      colour = mass_resid), 
+            alpha = 0.06, size = 0.5) + 
   geom_hline(yintercept = 0, col = "darkblue", linetype = 2) +
   geom_line(linewidth = 1.01, col = "black") + 
   geom_ribbon(data = pdat,
@@ -274,7 +284,6 @@ jet.colors <- colorRampPalette(rev(c("#00007F", "blue", "#007FFF", "cyan",
 
 # The problem with this is that the dist function doesn't work on anything above 2-D smooths. So we could need and plot this manually. 
 sm <- smooth_estimates(dlm_full, n = 300, smooth = 3, n_3d = 16) 
-
 # Only plot the prediction surface that falls within the 95% ellipse
 d <- dplyr::select(df_model, tmax.1 , ndvi.1) %>% 
   rename(x = tmax.1, y = ndvi.1)
@@ -284,8 +293,11 @@ kd <- ks::kde(d, compute.cont=TRUE, h=0.2)
 
 # extract the 95% polygon (5% probability mass) 
 get_contour <- function(kd_out=kd, prob="5%") {
-  contour_95 <- with(kd_out, contourLines(x=eval.points[[1]], y=eval.points[[2]],
-                                          z=estimate, levels=cont[prob])[[1]])
+  contour_95 <- with(kd_out, 
+                     contourLines(x=eval.points[[1]], 
+                                  y=eval.points[[2]],
+                                  z=estimate, 
+                                  levels=cont[prob])[[1]])
   as_tibble(contour_95) %>% 
     mutate(prob = prob)
 }
@@ -340,7 +352,7 @@ plot_te <- ggplot(filter(sm, lags_weekly %in% c(1,2,4,8,12,16)),
   facet_wrap(~lags_weekly, ncol = 3, labeller = as_labeller(lagnames)) +
   coord_cartesian(expand = FALSE) +
   scale_fill_gradientn(colors = jet.colors(10),
-                       rescaler = ~ scales::rescale_mid(.x, mid = -10))  + 
+                       rescaler = ~ scales::rescale_mid(.x, mid = -12))  + 
   xlim(c(16, 43)) + 
   ylim(c(0.135, 0.32))
 
@@ -375,12 +387,12 @@ dlm_subfemale <- gam(weeklyresid ~
                        s(GroupSize, k = 3, bs = "cr") +
                        te(ndvi_weekly, tmax_weekly, lags_weekly,
                           bs = "cr", k = c(5,5,5)),    
-                     data = df_model_subfem,  
+                     data=df_model_subfem,  
                      method = "REML")
 summary(dlm_subfemale)  
 
 layout(matrix(1:4, ncol = 2))
-gam.check(dlm_subfemale) 
+gam.check(dlm_subfemale) # misses some of the extreme residuals but its not bad
 k.check(dlm_subfemale)
 layout(1)
 mgcv::plot.gam(dlm_subfemale, select = 1, main = NA)
@@ -410,10 +422,10 @@ dlm_submale <- gam(weeklyresid ~
                         bs = "cr", k = c(5,5,5)),    
                    data=df_model_submale,  
                    method = "REML")
-summary(dlm_submale) 
+summary(dlm_submale)  # quick to run
 
 layout(matrix(1:4, ncol = 2))
-gam.check(dlm_submale) 
+gam.check(dlm_submale) # misses some of the extreme residuals but its not bad
 k.check(dlm_submale)
 layout(1)
 mgcv::plot.gam(dlm_submale, select = 1, main = NA)
@@ -450,7 +462,7 @@ dlm_domfemale <- gam(weeklyresid ~
 summary(dlm_domfemale) 
 
 layout(matrix(1:4, ncol = 2))
-gam.check(dlm_domfemale) 
+gam.check(dlm_domfemale) # misses some of the extreme residuals but its not bad
 k.check(dlm_domfemale)
 layout(1)
 mgcv::plot.gam(dlm_domfemale, select = 1, main = NA)
@@ -484,10 +496,10 @@ dlm_dommale <- gam(weeklyresid ~
                         bs = "cr", k = c(5,5,5)),    
                    data=df_model_dommale,  
                    method = "REML")
-summary(dlm_dommale)  
+summary(dlm_dommale)  # quick to run
 
 layout(matrix(1:4, ncol = 2))
-gam.check(dlm_dommale) 
+gam.check(dlm_dommale) # misses some of the extreme residuals but its not bad
 k.check(dlm_dommale)
 layout(1)
 mgcv::plot.gam(dlm_dommale, select = 1, main = NA)
@@ -501,6 +513,12 @@ dommale_model_fit <- predict(dlm_dommale, type = "response") %>%
 dommale_model_fit %>%
   summarize(MAD = mean(abs(obs - pred), na.rm = TRUE),
             RMSE = sqrt(mean((obs - pred) ^ 2)))
+
+# Predict all the model outputs 
+df_model_subfem$fitted <- fitted(dlm_subfemale)
+df_model_submale$fitted <- fitted(dlm_submale)
+df_model_domfem$fitted <- fitted(dlm_domfemale)
+df_model_dommale$fitted <- fitted(dlm_dommale)
 
 # Predict the historic body condition time series for each class of individual
 
@@ -599,7 +617,7 @@ p_cats <- ggplot() +
   scale_fill_manual(values = c("gold", "red", "turquoise", "purple")) + 
   scale_colour_manual(values = c("gold", "red", "turquoise", "purple"))
 
-# Plot the 1-3 week lag for each of these models
+# Plot the 1-8 week lag for each of these models
 sm_subfem <- smooth_estimates(dlm_subfemale, n = 300, smooth = 3, n_3d = 16) %>% 
   mutate(DomStatus = "Subordinate female")
 sm_submale <- smooth_estimates(dlm_subfemale, n = 300, smooth = 3, n_3d = 16) %>% 
@@ -622,8 +640,7 @@ sm_domfem <- filter(sm_domfem, inside == 1)
 sm_dommale <- filter(sm_dommale, inside == 1)
 
 sm_allcat <- bind_rows(sm_subfem, sm_submale, sm_domfem, sm_dommale)
-sm_allcat <- filter(sm_allcat, lags_weekly %in% c(1,2,4,8)) %>% 
-  rename(est = .estimate)
+sm_allcat <- filter(sm_allcat, lags_weekly %in% c(1,2,4,8))
 
 lagnames2 <- lagnames <- c(
   `1` = "Lag = 1",
@@ -642,10 +659,10 @@ strip <- strip_themed(background_x = elem_list_rect(fill = rep("lightblue", 3)),
                       background_y = elem_list_rect(fill =  status_cols))
 
 plot_te2 <- ggplot(sm_allcat, aes(x = tmax_weekly, y = ndvi_weekly)) + 
-  geom_raster(aes(fill = est)) +
-  geom_contour(aes(z = est), breaks = seq(-80, 80, 5), 
+  geom_raster(aes(fill = .estimate)) +
+  geom_contour(aes(z = .estimate), breaks = seq(-80, 80, 5), 
                colour = "black", alpha = 0.2) +
-  geom_contour(aes(z = est), breaks = 0, 
+  geom_contour(aes(z = .estimate), breaks = 0, 
                colour = "black", linetype = 2) +
   labs(title = NULL, caption = NULL,
        y = "Weekly NDVI", x = "Mean weekly\n maximum temperature (°C)", 
@@ -666,8 +683,9 @@ plot_te2 <- ggplot(sm_allcat, aes(x = tmax_weekly, y = ndvi_weekly)) +
   ylim(c(0.135, 0.32))
 
 #-------------------------------
+
 # Lastly, combine the estimates from the different smooths to give the predicted body condition in each week of the year, on average 
-# We will base this on using the long-term median NDVI/Temp values in for each month 
+# I will base this on using the long-term median NDVI/Temp values in for each month 
 pred_df <- df_model %>% 
   # remember ndvi/tempmax are lagged by 1 week so we want to first move them forward 1 week
   mutate(ndvi = lead(ndvi.1), tmax = lead(tmax.1)) %>% 
@@ -816,6 +834,5 @@ plot_te <- plot_te +
 
 plot_te / p_rawndvi / p_rawtemp / p_average + 
   plot_layout(heights = c(0.48, 0.125, 0.125, 0.2))
-
 
 #########################  END ###################################
