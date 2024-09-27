@@ -12,15 +12,15 @@
 setwd("INSERT FILE PATH HERE ")
 
 # Load required packages
-lapply(c("cowplot", "ggh4x", "ggplot2", "gratia", "lubridate", "mgcv", "patchwork", "RMySQL", "tidyverse"), FUN = library, character.only = TRUE)
+lapply(c("cowplot", "ggh4x", "ggplot2", "gratia", "lubridate", "mgcv", "patchwork", "RMySQL", "sf", "tidyverse"), FUN = library, character.only = TRUE)
 
 # Load the data sets: 
 # Temperature 
 temp <- read.csv("Data\\MeerkatDailyTemp.csv", header = TRUE) %>% 
-     mutate(date = as.Date(date), 
-            tempmax = if_else(tempmax_noaa < 0, as.numeric(NA), tempmax_noaa ), 
-            tempmin = if_else(tempmin_noaa  < -15, as.numeric(NA), tempmin_noaa),
-            temp_mid = tempmax - (tempmax - tempmin)/2)
+  mutate(date = as.Date(strptime(date, format = "%d/%m/%Y")), 
+         tempmax = if_else(tempmax_noaa < 0, as.numeric(NA), tempmax_noaa ), 
+         tempmin = if_else(tempmin_noaa  < -15, as.numeric(NA), tempmin_noaa),
+         temp_mid = tempmax - (tempmax - tempmin)/2)
 
 # NDVI 
 ndvi <- read.csv("Data\\MeerkatNDVI.csv", header = T) %>% 
@@ -108,7 +108,7 @@ range(df_model$date)
 tmax_weekly <- as.matrix(dplyr::select(df_model, tmax.1:tmax.16))
 ndvi_weekly <- as.matrix(dplyr::select(df_model, ndvi.1:ndvi.16))
 lags_weekly <-  matrix(rep(1:16, times = nrow(df_model)), ncol = 16, byrow = TRUE)
-df_model$year <- factor(df_model$year)
+#df_model$year <- factor(df_model$year)
 
 # Fit the model
 dlm_full <- gam(weeklyresid ~ 
@@ -316,16 +316,15 @@ sm$inside <- st_intersects(points_sf, polygon_sf, sparse = T) %>%
   replace_na(0)
 intersection_pts <- sm$inside # store for later
 # filter out only those points falling within the surface
-sm <- filter(sm, inside == 1) %>% 
-  rename(est = .estimate)
+sm <- filter(sm, inside == 1)
 
 # plot at a smaller range of lags
 plot_te <- ggplot(filter(sm, lags_weekly %in% c(1,2,4,8,12,16)), 
                    aes(x = tmax_weekly, y = ndvi_weekly)) + 
-  geom_raster(aes(fill = est)) + 
-  geom_contour(aes(z = est), breaks = seq(-80, 80, 5), 
+  geom_raster(aes(fill = .estimate)) + 
+  geom_contour(aes(z = .estimate), breaks = seq(-80, 80, 5), 
                colour = "black", alpha = 0.2) +
-  geom_contour(aes(z = est), breaks = 0, 
+  geom_contour(aes(z = .estimate), breaks = 0, 
                colour = "black", alpha = 0.5, linetype = 2) +
   labs(title = NULL, caption = NULL,
        y = "Weekly NDVI", x = "Mean weekly\n maximum temperature (°C)", 
@@ -334,15 +333,14 @@ plot_te <- ggplot(filter(sm, lags_weekly %in% c(1,2,4,8,12,16)),
   theme(axis.text = element_text(size = 9, colour = "black"), 
         strip.text = element_text(size = 10, colour = "black"), 
         axis.title = element_text(size = 10.5, colour = "black"), 
-        legend.title.align = 0.5, 
-        legend.title = element_text(size = 10),
+        legend.title = element_text(size = 10, hjust = 0.5),
         legend.text = element_text(size = 9),
         strip.background = element_rect(fill = "lightblue"), 
         panel.grid = element_blank()) + 
   facet_wrap(~lags_weekly, ncol = 3, labeller = as_labeller(lagnames)) +
   coord_cartesian(expand = FALSE) +
   scale_fill_gradientn(colors = jet.colors(10),
-                       rescaler = ~ scales::rescale_mid(.x, mid = -15))  + 
+                       rescaler = ~ scales::rescale_mid(.x, mid = -10))  + 
   xlim(c(16, 43)) + 
   ylim(c(0.135, 0.32))
 
