@@ -1,4 +1,4 @@
-# Linking climate variability to demography in arid environments: a mechanistic study in Kalahari meerkats
+# Linking climate variability to demography in meerkats
 
 This repository contains R scripts for analyzing the relationship between climate variability and meerkat demography. 
 
