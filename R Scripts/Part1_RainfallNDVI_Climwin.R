@@ -16,8 +16,9 @@ setwd("INSERT FILE PATH HERE")
 
 # Load in the data sets: 
   # NDVI 
-ndvi <- read.csv("Data\\MeerkatNDVI.csv", header = T) %>% 
-  mutate(date = as.Date(date))
+ndvi <- read.csv("Data\\MeerkatNDVIMasked.csv", header = T) %>% 
+  mutate(date = as.Date(date)) %>% 
+  rename(mean_ndvi = mean_ndvi_masked)
 
   # Rainfall (measured on-site)
 rain <- read.csv("Data\\MeerkatRainReserve.csv", header = TRUE) %>% 
