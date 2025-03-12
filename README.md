@@ -1,7 +1,7 @@
 # Linking climate variability to demography in meerkats
 
 This repository contains R scripts for analyzing the relationship between climate variability and meerkat demography from our Ecological Monographs (2025) paper:
- *Linking climate variability to demography in arid environments: a study of cooperatively breeding meerkats*
+ *Linking climate variability to demography in cooperatively breeding meerkats*
 
 The aim of our study was to develop a mechanistic understanding of how variation in rainfall and temperature affect meerkat demography. Specifically, we:
 - Identified the critical period during which rainfall influences vegetation productivity at the field site.
