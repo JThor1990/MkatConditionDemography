@@ -1,8 +1,9 @@
 ###########################################################
 
-# LINKING CLIMATE VARIABILITY TO DEMOGRAPHY IN ARID ENVIRONMENTS: A MECHANISTIC STUDY IN KALAHARI MEERKATS 
+# LINKING CLIMATE VARIABILITY TO DEMOGRAPHY IN COOPERATIVELY BREEDING MEERKATS
 
-# AUTHORS: Thorley, Duncan, ... and Clutton-Brock (2024) 
+# AUTHORS: Thorley, Duncan, Manser and Clutton-Brock (2025)
+# PAPER: ECOLOGICAL MONOGRAPHS
 
 # PART 3: MODELLING DAY TO DAY CHANGES IN WEIGHT GAIN AND WEIGHT LOSS
 
@@ -13,16 +14,19 @@ lapply(c("tidyverse", "ggplot2", "job", "ks", "lubridate", "mgcv", "gamm4",
          "gratia", "patchwork", "performance", "glmmTMB", "sf"), 
        FUN = library, character.only = TRUE)
 
-# set up the working environment 
-setwd("C:\\Users\\Jack\\Dropbox\\MeerkatEnvironmentWork\\Climate Paper 2\\Github scripts\\")
-
-# create an inverse logit function for when backtransforming from binomial models
-inv.logit <- function(x) { exp(x)/(1+exp(x)) }
+# Set up the working directory
+setwd("INSERT FILE PATH HERE")
 
 # load up the data sets
-weekly_dwg <- read.csv("Data\\MeerkatWeeklyPopulationLevelDWG.csv", header = TRUE)
-oml <- read.csv("Data\\MeerkatOvernightMassLoss.csv", header = TRUE)
-dwg <- read.csv("Data\\MeerkatIndividualDailyWeightGain.csv", header = TRUE)
+weekly_dwg <- read.csv("Data\\MeerkatWeeklyPopulationLevelDWG.csv", header = TRUE) %>% 
+  mutate(Date = dmy(Date))
+oml <- read.csv("Data\\MeerkatOvernightMassLoss.csv", header = TRUE) %>% 
+  mutate(Date = dmy(Date))
+dwg <- read.csv("Data\\MeerkatIndividualDailyWeightGain.csv", header = TRUE) %>% 
+  mutate(Date = dmy(Date))
+
+# function for predicting models back on response scale
+inv.logit <- function(x) { exp(x)/(1+exp(x)) }
 
 #-------------------------------------------
 # Correlation between average daily weight gain and the change in the average body condition of   all adults per week. 
@@ -88,7 +92,7 @@ length(unique(oml$IndividID)) # n = 1682 individuals
  
   # fit the model 
   m1 <- glmmTMB(OvernightMassLoss_g ~ PriorDailyMassGain_abs_z*mass_resid_z*Season + 
-             (1|IndividID) + (1|breeding_season), 
+             (1|IndividID) + (1|GroupRef) + (1|breeding_season), 
              data = oml)
   summary(m1)
   anova(m1, update(m1,~.-PriorDailyMassGain_abs_z:mass_resid_z:Season))
@@ -125,9 +129,10 @@ length(unique(oml$IndividID)) # n = 1682 individuals
                                         `Body condition`  == 50 ~ "+50g")) %>% 
     mutate(`Body condition` = factor(`Body condition`, 
                                      levels = c("-50g", "0g", "+50g")), 
-           Season = case_when(Season  == "EarlySummer" ~ "Early summer", 
+           Season = factor(case_when(Season  == "EarlySummer" ~ "Early summer", 
                               Season  == "LateSummer" ~ "Mid to late summer", 
-                              Season  == "Winter" ~ "Winter"))
+                              Season  == "Winter" ~ "Winter"), 
+                           levels = c("Mid to late summer", "Winter", "Early summer")))
 
 # Create the plot  
   p2 <- ggplot() + 
@@ -185,15 +190,14 @@ length(unique(oml$IndividID)) # n = 1682 individuals
       mutate(Season = case_when(month(Date) %in% 5:8 ~ "Winter",
                                 month(Date)  %in% 9:11 ~ "EarlySummer", 
                                 month(Date)  %in% c(12, 1:4) ~ "LateSummer")) %>% 
-    filter(agecat == "Adult", between(mass_resid, -10, 10), 
-           PregnantLactating != "Pregnant") %>% 
+    filter(between(mass_resid, -10, 10)) %>% 
     group_by(Season) %>% 
     summarise(mean(MorningWeight)) %>% 
     data.frame()
 
-  (657.5611 + 26.1)/657.5611 # early summer cut @ 26g  -- > 4.0%
-  (647.1172 + 27.5)/647.1172 # late summer cut @ 27.5g -- > 4.3%
-  (654.3306 + 28.9)/654.3306 # winter cut @ 28.9g  -- > 4.4%
+  (647.1193 + 27.7)/647.1193 # late summer cut @ 27.7g -- > 4.3%
+  (654.3496 + 29.2)/654.3496 # winter cut @ 29.2g  -- > 4.5%
+  (657.5883 + 26.3)/657.5883 # early summer cut @ 26.3g  -- > 4.0%
 
 # Calculate the mean condition, mass and daily mass gain in each period using the larger data set
 dwg %>% 
@@ -209,20 +213,20 @@ dwg %>%
 
 #oml <- oml %>% 
 #  mutate(neutralovertwodays = if_else(PriorDailyMassGain_abs >= OvernightMassLoss_g, 1, 0), 
-#         exceedsthresholdmass = case_when(Season == "EarlySummer" & PriorDailyMassGain_abs >= 26 ~ 1,
-#                                       Season == "EarlySummer" & PriorDailyMassGain_abs < 26 ~ 0, 
-#                                       Season == "LateSummer" & PriorDailyMassGain_abs >= 27.5 ~ 1,
-#                                       Season == "LateSummer" & PriorDailyMassGain_abs < 27.5  ~ 0,
-#                                       Season == "Winter" & PriorDailyMassGain_abs >= 28.9 ~ 1,
-#                                       Season == "Winter" & PriorDailyMassGain_abs < 28.9 ~ 0))
+#         exceedsthresholdmass = case_when(Season == "EarlySummer" & PriorDailyMassGain_abs >= 26.3 ~ 1,
+#                                       Season == "EarlySummer" & PriorDailyMassGain_abs < 26.3 ~ 0, 
+#                                       Season == "LateSummer" & PriorDailyMassGain_abs >= 27.7 ~ 1,
+#                                       Season == "LateSummer" & PriorDailyMassGain_abs < 27.7  ~ 0,
+#                                       Season == "Winter" & PriorDailyMassGain_abs >= 29.2 ~ 1,
+#                                       Season == "Winter" & PriorDailyMassGain_abs < 29.2 ~ 0))
 
 dwg <- dwg %>% 
-  mutate(exceedsthresholdmass = case_when(Season == "EarlySummer" & WeightGain_g  >= 26.1 ~ 1,
-                                          Season == "EarlySummer" & WeightGain_g  < 26.1 ~ 0, 
-                                          Season == "LateSummer" & WeightGain_g  >= 27.5 ~ 1,
-                                          Season == "LateSummer" & WeightGain_g  < 27.5  ~ 0,
-                                          Season == "Winter" & WeightGain_g  >= 28.9 ~ 1,
-                                          Season == "Winter" & WeightGain_g  < 28.9 ~ 0), 
+  mutate(exceedsthresholdmass = case_when(Season == "EarlySummer" & WeightGain_g  >= 26.3 ~ 1,
+                                          Season == "EarlySummer" & WeightGain_g  < 26.3 ~ 0, 
+                                          Season == "LateSummer" & WeightGain_g  >= 27.7 ~ 1,
+                                          Season == "LateSummer" & WeightGain_g  < 27.7 ~ 0,
+                                          Season == "Winter" & WeightGain_g  >= 29.2 ~ 1,
+                                          Season == "Winter" & WeightGain_g  < 29.2 ~ 0), 
          breeding_season = if_else(month %in% 1:7, year(Date) - 1, year(Date))) %>% 
   mutate(breeding_season = paste0(breeding_season, "/", breeding_season + 1))
 
@@ -246,13 +250,13 @@ oml <- oml %>%
     m2_full <- gamm(exceedsthresholdmass ~ Season + 
                  te(tempmax, ndvi_group, by = Season, k = c(5,5), bs = "cr") + 
                  s(GroupSize_1moavg, k = 3, bs = "cr"), 
-               random = list(IndividID = ~ 1, breeding_season = ~ 1), 
+               random = list(IndividID = ~ 1, GroupRef = ~ 1, breeding_season = ~ 1), 
                data = dwg, 
                method = "REML", 
                family = "binomial") 
     })
 
-  saveRDS(m2_full, "ThresholdmassModel.rds")
+  #saveRDS(m2_full, "ThresholdmassModel.rds")
   m2_full <- readRDS("ThresholdmassModel.rds")
   summary(m2_full$gam)
   summary(m2_full$lme)
@@ -265,19 +269,19 @@ oml <- oml %>%
   # Quick look at the estimated smooths before predicting manually 
   # early summer (Sep-Nov)
   mgcv::plot.gam(m2_full$gam, select = 1, scheme = 2, 
-                 shift = 0.5683,
+                 shift = 0.001423,
                  trans = inv.logit,
                  main = NA, too.far = 0.03)
 
   # mid to late summer (Dec-Apr)
   mgcv::plot.gam(m2_full$gam, select = 2, scheme = 2, 
-                 shift = 0.5683  + 0.1554,
+                 shift = 0.001423  + 0.729772,
                  trans = inv.logit,
                  main = NA, too.far = 0.03)
 
   # Winter (Jun-Aug)
   mgcv::plot.gam(m2_full$gam, select = 3, scheme = 2, 
-                 shift = 0.5683 - 0.3257,
+                 shift = 0.001423 + 0.174724,
                  trans = inv.logit,
                  main = NA, too.far = 0.03)
   
@@ -291,7 +295,7 @@ oml <- oml %>%
   #  m2_full_gamm4 <- gamm4::gamm4(exceedsthresholdmass ~ Season + 
   #                 t2(tempmax, ndvi_group, by = Season, k = c(5,5), bs = "cr") + 
   #                 s(GroupSize_1moavg, k = 5, bs = "cr"),    # need slightly higher k to run
-  #                 random = ~ (1|IndividID) + (1|breeding_season), 
+  #                 random = ~ (1|IndividID) + (1|GroupRef) + (1|breeding_season), 
   #                 data = dwg, 
   #                REML = TRUE, 
   #               family = "binomial") 
@@ -422,9 +426,9 @@ oml <- oml %>%
   # absolute predicted probability
   summary(m2_full$gam)
   sm$pred <- NA
-  sm$pred[sm$Season == "EarlySummer"] <- sm$.estimate[sm$Season == "EarlySummer"] + 0.5683
-  sm$pred[sm$Season == "LateSummer"] <- sm$.estimate[sm$Season == "LateSummer"] + 0.5683 + 0.1554     
-  sm$pred[sm$Season == "Winter"] <- sm$.estimate[sm$Season == "Winter"] + 0.5683 - 0.3257           
+  sm$pred[sm$Season == "EarlySummer"] <- sm$.estimate[sm$Season == "EarlySummer"] + 0.001423   
+  sm$pred[sm$Season == "LateSummer"] <- sm$.estimate[sm$Season == "LateSummer"] + 0.001423 + 0.729772      
+  sm$pred[sm$Season == "Winter"] <- sm$.estimate[sm$Season == "Winter"] + 0.001423 + 0.174724           
   
   # Need to now convert the smoothers back to the response scale
   hist(inv.logit(sm$pred))
@@ -435,9 +439,10 @@ oml <- oml %>%
                                        "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")))
   
   # Rename the factor levels for the plot
-  sm$Season <- case_when(sm$Season == "EarlySummer" ~ "Early summer",
+  sm$Season <- factor(case_when(sm$Season == "EarlySummer" ~ "Early summer",
                          sm$Season == "LateSummer" ~ "Mid to late summer",
-                         sm$Season == "Winter" ~ "Winter")
+                         sm$Season == "Winter" ~ "Winter"), 
+                      levels = c("Mid to late summer", "Winter", "Early summer"))
   
   # produce plot from the smoothers
   p3 <- ggplot(sm, aes(x = tempmax, y = ndvi_group)) + 
@@ -566,14 +571,12 @@ oml <- oml %>%
     m3 <- gamm(WeightGain_g ~ Season + 
                  te(tempmax, ndvi_group, by = Season, k = c(5,5), bs = "cr") + 
                  s(GroupSize_1moavg, k = 3, bs = "cr"), 
-               random = list(IndividID = ~ 1, breeding_season = ~ 1), 
+               random = list(IndividID = ~ 1, GroupRef = ~ 1, breeding_season = ~ 1), 
                data = dwg, 
                method = "REML", 
                family = "gaussian") 
   })
-
-  
-  #saveRDS(m3, "DMGModel.rds")
+  saveRDS(m3, "DMGModel.rds")
   m3 <- readRDS("DMGModel.rds")
   summary(m3$gam)
   summary(m3$lme)
@@ -587,17 +590,17 @@ oml <- oml %>%
   par(mfrow = c(1,3))
   # early summer (Sep-Nov)
   mgcv::plot.gam(m3$gam, select = 1, scheme = 2, 
-                 shift = 35.273,
+                 shift = 69.65,
                  main = NA, too.far = 0.03)
   
   # mid to late summer (Dec-Apr)
   mgcv::plot.gam(m3$gam, select = 2, scheme = 2, 
-                 shift = 35.273  + 1.065,
+                 shift = 69.65 - 33.29,
                  main = NA, too.far = 0.03)
   
   # Winter (Jun-Aug)
   mgcv::plot.gam(m3$gam, select = 3, scheme = 2, 
-                 shift = 35.273 - -3.489,
+                 shift = 69.65 - 37.54,
                  main = NA, too.far = 0.03)
   
   # group size
@@ -697,13 +700,14 @@ oml <- oml %>%
   # absolute predicted probability
   summary(m3$gam)
   sm2$pred <- NA
-  sm2$pred[sm2$Season == "EarlySummer"] <- sm2$.estimate[sm2$Season == "EarlySummer"] + 35.273
-  sm2$pred[sm2$Season == "LateSummer"] <- sm2$.estimate[sm2$Season == "LateSummer"] + 35.273 + 1.065     
-  sm2$pred[sm2$Season == "Winter"] <- sm2$.estimate[sm2$Season == "Winter"] + 35.273 - 3.489           
+  sm2$pred[sm2$Season == "EarlySummer"] <- sm2$.estimate[sm2$Season == "EarlySummer"] + 69.65      
+  sm2$pred[sm2$Season == "LateSummer"] <- sm2$.estimate[sm2$Season == "LateSummer"] + 69.65 - 33.29           
+  sm2$pred[sm2$Season == "Winter"] <- sm2$.estimate[sm2$Season == "Winter"] + 69.65 - 37.54                 
   
-  sm2$Season <- case_when(sm2$Season == "EarlySummer" ~ "Early summer",
+  sm2$Season <- factor(case_when(sm2$Season == "EarlySummer" ~ "Early summer",
                           sm2$Season == "LateSummer" ~ "Mid to late summer",
-                          sm2$Season == "Winter" ~ "Winter")
+                          sm2$Season == "Winter" ~ "Winter"), 
+                       levels = c("Mid to late summer", "Winter", "Early summer"))
   
   # produce plot
   p4 <- ggplot(sm2, aes(x = tempmax, y = ndvi_group)) + 
