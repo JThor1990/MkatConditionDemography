@@ -25,4 +25,6 @@ The R code is placed within 6 scripts, each of which carries out a specific anal
 
 (6) `Part6_FutureWarmingKalahari.R` - Projects future temperatures across the meerkat distribution for the middle (2050-2060) and end of the century (2090-2100). Specifically, we estimate the mean number of days per year exceeding 35°C, and 37°C. Above 35°C it becomes increasingly difficult for adult meerkats to maintain their body condition, and at 37°C the probability that adult meerkats lose body condition over successive days is very high (daily mass gains < overnight mass losses). 
 
-The scripts were produced by Dr Jack Thorley and Dr Christopher Duncan. All data sets are provided in the repository. 
+The scripts were produced by Dr Jack Thorley and Dr Christopher Duncan. All data sets are provided in the repository, alongside a text file detailing the contents of each column.
+
+**The individual, group, and litter identities have been anonymised for this study. This is to prevent anyone from trying to link different data sets produced by the Kalahari Meerkat Project, and potentially using the data to conduct their own analyses without knowledge of the data. However, within this study, the identities are relationally-linked, such that Individual "4" is consistent across data sets.**
