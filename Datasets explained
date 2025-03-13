@@ -1,0 +1,102 @@
+Thorley et al. 2025
+Linking climate variability to demography in cooperatively breeding meerkats
+
+Data sets used for each analysis. 
+
+(1) Part1_RainfallNDVI_Climwin.R
+
+	o MeerkatNDVIMasked.csv - Average NDVI across the ranges of all meerkat groups (MODIS). 
+	"mean_ndvi_masked" is provided every 16 days. 
+
+	o MeerkatRainReserve.csv - Daily rainfall (mm) at the field site. 
+	"Rain_method" indicates how the daily value was collected. 
+	"Rain_reserve" indicates the total daily rainfall (mm)
+
+(2) Part2_ForagingPerformance.R 
+
+	o MeerkatForagingData.csv - Historical data set of focal observations (1996-2001)
+	"Focal_ID" - Unique identifier for the observations
+	"GroupRef" - Group identity
+	"IndividID" - Individual identity
+	"BehavObsDuration" - The specific duration of the focal observation (~20 minutes)
+	"numAvgHour" - the mid-point of the focal, as the hour of the day
+	"tempmax" - the maximum temperature on the day of the focal
+	"ndvi" - the NDVI at the field site (GIMMs)
+	"SuccForageBoutCount" - Number of successful prey pursuits (prey captures)
+	"TotalDigDuration" - Time spent digging for prey throughout focal (seconds)
+	"DigProp" - Proportion of focal time spent digging
+
+(3) Part3_DWGandOML.R 
+
+	o MeerkatWeeklyPopulationLevelDWG.csv - Population-level average daily weight gain, averaged per week. 
+	"uniqueinds" - Number of unique individuals that were averaged over
+	"mean_morningmass" - Mean morning body mass (g)
+	"mean_massresid" - Mean residual body mass (g), which we refer to as body condition in the paper; deviation from individual lifetime body mass trajectories
+	"mean_percentmassgain" - % daily body mass gain from morning to the evening, averaged over all individuals in the week. 
+	"mean_absmassgain" - Absolute daily body mass from from morning to evening, averaged over all individuals 
+	- ConditionChange_t_t1 - Change in average body condition from one week to the next.
+
+	o MeerkatIndividualDailyWeightGain.csv - Individual daily body mass gain per-day
+	"GroupRef" - Group identity
+	"IndividID" - Individual identity 
+	"DomStatus" - Dominant or subordinate individual
+	"MorningWeightTime" -Time of morning body mass measurement
+	"EveningWeightTime" - Time of evening body mass measurement
+	"MorningWeight" -  Body mass of meerkat in the morning before commences foraging (g)
+	"EveningWeight" - Body mass of meerkat in the evening after a full day's foraging (g)
+	"WeightGain" - Daily body mass gain (g)
+	"TimeDifference" - Time difference between morning and evening mass measurements
+	"percentmassgain" - % body mass gain throughout the day (evening/morning*100)
+	"GroupSize_1moavg" - Group size 
+	"tempmax" - Maximum daily temperature on the day
+	"ndvi_group" - Average NDVI within the home range of the group (MODIS NDVI)
+	"mass_resid" - Mean residual body mass (g) - described above
+
+	o MeerkatOvernightMassLoss.csv -  Individual overnight body mass loss. As for previous data set, but combines DWG with OML so that day-to-day changes in mass can be estimated: "WeightChangeMorningToMorning".
+
+(4) Part4_DistributedLagModels.R 
+
+	o MeerkatDailyTemp.csv - Long-term daily temperatures at the Kuruman River Reserve. Date were either collected at the field site ("_station"), or taken from the NOAA Climate Prediction Centre product ("_noaa"). 
+
+	o MeerkatNDVImasked.csv - As described in (1)
+
+	o MeerkatWeeklyConditionAllAdults.csv - Average weekly body condition (g) of all adults in the population that provided data. 
+	"uniqueinds" - number of distinct individuals contributing to the mean
+	"weeklyresid" - mean weekly body condition of indivdiuals
+	"weeklyreldev" - mean weekly condition but presented as a proportional deviation. 
+	"uniqueinds" - number of individuals contributing to the mean
+	"Groupsize" - the average group size of groups in the population, including pups
+	"Groupsize_ExcPups" - the average group size of groups in the population, excluding pups
+
+	o MeerkatWeeklyConditionSubFemales.csv/MeerkatWeeklyConditionSubMales.csv/MeerkatWeeklyConditionDomFemales.csv/MeerkatWeeklyConditionDomMales.csv - As above but separated by four categories of adults (sex/dominance status)
+
+(5) Part5_VitalRates.R 
+
+	o MeerkatPregnancySurvival.csv - 
+	"IndividID" - Individual identity 
+	"MonthStart" - The start of the month of interest
+	"Age" - The age of the female at the start of the month
+	"avgCondition" - The average body condition across the month (g)
+	"TB" - Did the female have TB?
+	"Dominant" - the dominance status of the mother
+	"Died" - Did the female die in the month
+	"Diss" - Did the female disappear in the month
+	"Preg" - Did the female fall pregnant in the month
+
+	o MeerkatLitterSuccess.csv - Whether litters were weaned
+	"ReprodRef" - unique litter identifier
+	"FemaleID" - unique mother identifier (relates to IndividID in other data sets)
+	"BirthDate" - Date of birth of the litter
+	"Age" - Age of the mother at start of pregnancy
+	"Cond7Day" - average body condition (g) of the mother in the week around pregnancy
+	"TB" - did the mother have TB during pregnancy
+	"Dominant" - the dominance status of the mother
+	"LitterSuccess" - were any pups from the litter successfully weaned
+
+(6) Part6_FutureWarmingKalahari.R
+	o MeerkatCMIP6Tmax.csv - Number of days exceeding 35°C or 37°C degrees in CMIP6 EC-Earth3-CC climate projections
+	"experiment" - historical/medium-risk future (ssp245)/high-risk future (ssp585)
+	"tmax35" -  for each lat-long combo, the number of days exceeding 35°C
+	"tmax37" - for each lat-long combo, the number of days exceeding 37°C
+
+	o MeerkatCMIP6ConsecutiveTmax.csv - As previous, but the maximum number of consecutive days exceeding the temperature thresholds. 
