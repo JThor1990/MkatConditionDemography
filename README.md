@@ -27,4 +27,4 @@ The R code is placed within 6 scripts, each of which carries out a specific anal
 
 The scripts were produced by Dr Jack Thorley and Dr Christopher Duncan. All data sets are provided in the repository, alongside a text file detailing the contents of each column.
 
-**The individual, group, and litter identities have been anonymised for this study. This is to prevent anyone from trying to link different data sets produced by the Kalahari Meerkat Project, and potentially using the data to conduct their own analyses without knowledge of the data. However, within this study, the identities are relationally-linked, such that Individual "4" is consistent across data sets.**
+**The individual, group, and litter identities have been anonymised for this study. This is to prevent anyone from trying to link different data sets produced by the Kalahari Meerkat Project, and potentially using the data to conduct their own analyses without knowledge of how the data have been processed, or of the system from which they derive. Within this specific study, the identities are relationally-linked, so that, for example, Individual "4" is consistent across data sets.**
